@@ -230,34 +230,6 @@ def ContigGeneration(patterns):
 	contigs = []
 	dB = DeBruijnsFromKmers(patterns)
 	contigs = MaximalNonBranchingPaths(dB)
-
-
-	'''c = 0
-				for i in len(dB.keys()):
-								degree,in_degree,out_degree = NodeDegree(dB, dB.keys()[i])
-								if len(dB.values()[i]) == 1
-			
-				for i in dB.keys():
-					print c
-					if c > 0:
-						c -=1
-						continue
-					contig = ""
-					for j in dB[i]:
-			
-						degree,in_degree,out_degree = NodeDegree(dB, j)
-						print in_degree,out_degree
-						if in_degree == out_degree == 1:
-							print "here"
-							x = i
-							contig += x
-							x = dB[x][0]
-							while len(dB[x]) == 1:
-								contig += x[-1]
-								c += 1
-								x = dB[x][0]
-							contig += x
-							contigs.append(contig)'''
 	return " ".join(contigs)
 
 
@@ -270,7 +242,7 @@ with open("dataset_205_5.txt") as handle:
 
 sys.setrecursionlimit(7000)
 print "Recursion limit:",sys.getrecursionlimit()
-#print ((data[2].replace("->" ,"" )).replace(","," ")).split()
+
 '''read_pairs = []
 for x in range(2, len(data)):
 	s = (data[x].replace("|" ," " )).split()
@@ -279,8 +251,7 @@ for x in range(2, len(data)):
 
 contigs= ContigGeneration(data[:])
 print contigs
-#print len(text)
-#print NodeDegree(adj_list, str(246))
+
 
 '''for i in graph.items():
 	if len(i[1])>0:
@@ -288,12 +259,6 @@ print contigs
 
 #data = data.strip()
 
-#print StringComposition(int(data[0], data[1]))
-
-#answer =  PathToGenome(data)
-#print answer
-'''for i in answer:
-	print i'''
 
 '''txt = '\n'.join(answer)
 f = open('data.txt','w')
