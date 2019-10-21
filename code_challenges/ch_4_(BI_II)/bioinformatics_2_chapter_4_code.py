@@ -1,10 +1,50 @@
+
 import sys
 import numpy as np
-try:
-    from functools import lru_cache
-except ImportError:
-    from backports.functools_lru_cache import lru_cache
+import collections
 
+from collections import Counter
+import copy
+
+
+
+class Peptide(object):
+
+	#cache = TTLCache(maxsize = 10000000, ttl = 300)
+
+	def __init__ (self,string):
+		'''initialize Peptide instance'''
+		self.string = string
+		self.mass = self.ProteinMass(self.string)
+		self.cyc_spec = self.CycloSpectrum(string)
+
+	def ProteinMass(self, string):
+		'''return protein mass from sequence'''
+		aa_mass = "G 57 A 71 S 87 P 97 V 99 T 101 C 103 L 113 I 113 N 114 D 115 K 128 Q 128 E 129 M 131 H 137 F 147 R 156 Y 163 W 186"
+		mass_l = aa_mass.split()
+		mass_d = dict(zip(mass_l[0::2], [int(x) for x in (mass_l[1::2])]))
+		mass = 0
+		mass = sum([mass_d[x] for x in string])
+		return mass
+
+	def CycloSpectrum(self,string):
+		'''given a circular peptide string, return the masses of all subpeptides'''
+		spectrum = [0, self.mass]
+		l = len(string)
+		for i in xrange(l):
+			for j in xrange(1,l):
+				spectrum.append(self.ProteinMass((string*2)[i:i+j]))
+		return (spectrum)
+
+	def ProteinToMass(self):
+		seq = ""
+		aa_mass = "G 57 A 71 S 87 P 97 V 99 T 101 C 103 L 113 I 113 N 114 D 115 K 128 Q 128 E 129 M 131 H 137 F 147 R 156 Y 163 W 186"
+		mass_l = aa_mass.split()
+		aa_d = dict(zip(mass_l[0::2], [int(x) for x in (mass_l[1::2])]))
+		for i in self.string:
+			seq += str(aa_d[i])
+			seq += "-"
+		return seq[:-1]
 
 
 def ProteinTranslation(pattern):
@@ -38,20 +78,21 @@ def ProteinTranslation(pattern):
 
 	return aa
 
-def ProteinMass(string):
-	aa_mass = "G 57 A 71 S 87 P 97 V 99 T 101 C 103 I 113 N 114 D 115 K 128 E 129 M 131 H 137 F 147 R 156 Y 163 W 186"
-	mass_l = aa_mass.split()
-	mass_d = dict(zip(mass_l[0::2], [int(x) for x in (mass_l[1::2])]))
-	mass = 0
-	#for i in string:
-	mass = sum([mass_d[x] for x in string])
-	return mass
-
 def PepMass(pep):
 	aa_mass = "G 57 A 71 S 87 P 97 V 99 T 101 C 103 I 113 N 114 D 115 K 128 E 129 M 131 H 137 F 147 R 156 Y 163 W 186"
 	mass_l = aa_mass.split()
 	mass_d = dict(zip(mass_l[0::2], [int(x) for x in (mass_l[1::2])]))
 	return mass_d[pep]
+
+def ProteinToMass(prot):
+	seq = ""
+	aa_mass = "G 57 A 71 S 87 P 97 V 99 T 101 C 103 L 113 I 113 N 114 D 115 K 128 Q 128 E 129 M 131 H 137 F 147 R 156 Y 163 W 186"
+	mass_l = aa_mass.split()
+	aa_d = dict(zip(mass_l[0::2], [int(x) for x in (mass_l[1::2])]))
+	for i in prot:
+		seq += str(aa_d[i])
+		seq += "-"
+	return seq[:-1]
 
 def DToR(DNA_string):
     n = DNA_string.replace('T','U')
@@ -98,21 +139,6 @@ def NumSubpeptidesLin(n):
 		s += n-i
 	return s+1
 
-def CycloSpectrum(pep_string):
-	'''given a circular peptide string, return the masses of all subpeptides'''
-	spectrum = [0]
-	pep_string_extend = ''
-	l = len(pep_string)
-	for i in range(l*l):
-		pep_string_extend +=  pep_string
-	c = 1
-	while c < l:
-		for i in range(l):
-			spectrum.append(ProteinMass(pep_string_extend[i:i+c]))
-		c +=1
-	spectrum.append(ProteinMass(pep_string))
-	return (spectrum)
-
 def LinSpectrum(pep_string):
 	'''given a linear peptide string, return the masses of all subpeptides'''
 	spectrum = [0]
@@ -130,10 +156,8 @@ def LinSpectrum(pep_string):
 	spectrum.append(ProteinMass(pep_string))
 	return (spectrum)
 
-cache = {}
-
 def CountPeptides(mass_l,mass):
-	'''return number of possible peptides, given mass of peptide '''
+	'''return number of possible sub-peptides, given mass of peptide '''
 	if mass in cache:
 		return cache[mass]
 
@@ -145,24 +169,8 @@ def CountPeptides(mass_l,mass):
 	cache[mass] = value
 	return value
 
-def Expand(cand_pep):
-	aa = "G A S P V T C I N D K E M H F R Y W"
-	aa_list =  aa.split()
-	cand_pep_c = np.copy(cand_pep)
-	if len(cand_pep_c) == 0:
-		for i in aa_list:
-			cand_pep.append(i)
-	else:
-		for i in range(0, len(cand_pep_c)):
-			for aa in aa_list:
-				cand_pep.append(cand_pep_c[i]+aa)
-			cand_pep.remove(cand_pep_c[i])
-	return cand_pep
-
-
-
 def CyclopeptideSequencing(spectrum):
-	'''Branch-and-bound algorithm which sequences a cyclopeptide given its mass spectrum '''
+	'''Branch-and-bound algorithm which sequences a cyclopeptide given its mass spectrum, does not account for errors in experimental spectrum '''
 	cand_pep = ['']
 	final_pep = []
 	while cand_pep != []:
@@ -180,12 +188,99 @@ def CyclopeptideSequencing(spectrum):
 				cand_pep.remove(pep)
 	return final_pep
 
+def CyclopeptideScoring(string,spectrum):
+	'''returns the score of a peptide with regards to an experimental spectrum, based on matching with theoretical linspectrum '''
 
+	#initialize count
+	count  = 0
+	
+	#assign score of -1 to peptides with mass grater than parent mass, to be filtered later
+	if string.mass > int(spectrum[-1]):
+		print "FILTERED!"
+		return -1
 
+	#assign the cyclic theoretical spectrum
+	theo_spec = string.cyc_spec
+	#assign the score based on every substring in common with spectrum
+	count = sum([min(theo_spec.count(i), spectrum.count(str(i))) for i in set(theo_spec)])
+
+	#Similar efficiency method..:
+	#count  =  len(filter(lambda X: str(X) in set(spectrum),theo_spec))
+
+	return count
+
+def Expand(leaderboard):
+	'''takes a list of peptides and returns a new expanded list: each old peptide with each amino acid attached'''
+	aa = "G A S P V T C I N D K E M H F R Y W"
+
+	#assign list of amino acids
+	aa_list =  aa.split()
+	#initialize list of peptides to be returned as empty list
+	expanded_pep = []
+	
+	#check if this is the first time expand is being called..
+	if leaderboard == ['']:
+		for aa in aa_list:
+			expanded_pep.append(Peptide(aa))
+	else:
+		#iterate through peptides and add each peptide + each amino acid to new list.
+		for peptide in leaderboard:
+			for aa in aa_list:
+				expanded_pep.append(Peptide(peptide.string+aa))
+
+	return expanded_pep
+
+def Trim (leaderboard,N,scores):
+	'''return the top N highest scoring peptides in leaderboard, with regards to spectrum '''
+
+	#check total number of peptides
+	#if total is less than N,
+	if sum([len(peptide_list) for peptide_list in scores.values()]) < N:
+		#assign all top scoring ties to leaderboard to be expanded (gets rid of unnecessary starter peptides)
+		leaderboard = scores[max(scores.keys())]
+	else:
+		#add all the top scoring peptides to leaderboard until it has N values
+		while len(leaderboard) < N:
+			leaderboard += scores[max(scores.keys())]
+			del scores[max(scores.keys())]
+	return leaderboard
+
+def LeaderboardCyclopeptideSequencing (spectrum, N):
+	'''Leaderboard based algorithm for sequencing a cyclopeptide given an experimental spectrum, able to account for some error. WARNING: takes several minutes to run for large N values (>100).'''
+
+	#initialize leaderboard
+	leaderboard = ['']
+	#initialize dictionary to store scores
+	scores = dict()
+	#create initial list 
+	cand_pep = [[CyclopeptideScoring(pep, spectrum), pep] for pep in Expand(leaderboard)]
+
+	while cand_pep != []:
+
+		#initialize scores as an empty dictionary
+		scores= dict()
+		#initialize leaderboard as empty list
+		leaderboard = []
+
+		print "candidates:" ,cand_pep
+
+		#iterate through peptides and store scores
+		for i in cand_pep:
+			if i[0] in scores:
+				scores[i[0]].append(i[1])
+			else:
+				scores[i[0]] = [i[1]]
+
+		#trim the list of peptides based on not N scores
+		leaderboard = Trim(leaderboard, N, scores)
+		#create a new list of candidate peptides based on expanding leaderboard
+		cand_pep = filter(lambda X: X[0] != -1, [[CyclopeptideScoring(pep, spectrum), pep] for pep in Expand(leaderboard)])
+		
+	return leaderboard[0]
 
 sys.setrecursionlimit(10000)
 print "Recursion limit:",sys.getrecursionlimit()
-with open("dataset_100_6.txt") as handle:
+with open("dataset_102_8.txt") as handle:
 	data = [x for x in handle.read().split()]
 
 Bacillus_gene = ""
@@ -199,12 +294,5 @@ for i in data:
 m_list =  [57 ,71 , 87 , 97 , 99 , 101 , 103 , 113  ,114 ,115 , 128  ,129 ,131 ,137 ,147 ,156,163, 186]
 l = len(m_list)
 #print data[0]
-#print CountPeptides(m_list,int(data[0]))
-print [int(x) for x in data]
-for i in CyclopeptideSequencing([0 ,71, 99 ,101 ,103 ,128 ,129 ,199, 200 ,204, 227, 230, 231, 298, 303, 328 ,330 ,332 ,333]):
-	print "-".join ([str(x) for x in i])
-#print CountPeptides(m_list,1024)**(1.000/1024)
-#print NumSubpeptidesLin(20341)
-#[0, 113, 128, 186, 241, 299, 314 ,427]
-#[int(x) for x in data]
-#[0, 71, 97, 99, 103, 113, 113, 114, 115, 131, 137, 196, 200, 202, 208, 214, 226, 227, 228, 240, 245, 299, 311, 311, 316, 327, 337, 339, 340, 341, 358, 408, 414, 424, 429, 436 ,440 ,442, 453, 455, 471, 507, 527, 537, 539, 542, 551, 554, 556, 566, 586, 622, 638, 640, 651, 653 ,657, 664, 669 ,679, 685, 735 ,752, 753, 754, 756, 766, 777, 782, 782, 794 ,848, 853, 865, 866, 867 ,879, 885, 891, 893 ,897 ,956, 962, 978, 979, 980, 980 ,990, 994, 996, 1022, 1093]
+#print data[1:]
+print LeaderboardCyclopeptideSequencing(data[1:],int(80)).ProteinToMass()
