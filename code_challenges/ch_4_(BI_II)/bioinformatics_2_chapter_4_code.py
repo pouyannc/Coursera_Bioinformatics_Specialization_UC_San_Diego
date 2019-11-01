@@ -196,10 +196,13 @@ def ProteinToMass(leader_peps):
 			seq_list.append("-".join([str(ProteinMass(aa)) for aa in pep]))
 		return " ".join(seq_list)
 
+
+
+
 scores = dict()
 def LeaderboardCyclopeptideSequencing(spectrum,N):
 	'''Branch-and-bound algorithm which sequences a cyclopeptide given its mass spectrum, implements a leaderboard to account for error in the experimental spectrum.'''
-	#we can make this MORE ACCURATE by knowing the amino acid composition of the sequence and only incorporate that alphabet instead of all amino acids!
+	#we can make this MORE ACCURATE by knowing the amino acid composition of the sequence and only incorporate that alphabet instead of all amino acids! 
 	leaderboard = set([""])
 	leader_pep = [""]
 	while leaderboard != set([]):
@@ -246,14 +249,17 @@ start_time = time.time()
 sys.setrecursionlimit(10000)
 print "Recursion limit:",sys.getrecursionlimit()
 
-with open("dataset_103_2.txt") as handle:
+with open("dataset_104_4.txt") as handle:
 	data = [int(x) for x in handle.read().split()]
 
-print data[1:]
-output = LeaderboardCyclopeptideSequencingNP(data[1:], 1000)
-for i in output:
-	print "-".join([str(j) for j in i])
+#running leaderboardcyclopeptide sequecing
+#print data[1:]
+#output = LeaderboardCyclopeptideSequencingNP(data[1:], 1000)
 #print ProteinToMass(output)
 
+#output=  SpectralConvolution(data)
+#for i in output:
+#	print i
+print PepScore(LinSpectrum('PEEP'),[0 ,97, 97, 97, 100, 129, 194, 226, 226, 226, 258, 323, 323, 355, 393, 452])
 
 print ("--- %s seconds ---" % (time.time() - start_time))
